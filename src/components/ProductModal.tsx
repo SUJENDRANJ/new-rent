@@ -90,13 +90,19 @@ export const ProductModal = ({ product, onClose, onSuccess }: ProductModalProps)
           .update(productData)
           .eq('id', product.id);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error('Update error:', updateError);
+          throw updateError;
+        }
       } else {
         const { error: insertError } = await supabase
           .from('products')
-          .insert(productData);
+          .insert([productData]);
 
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('Insert error:', insertError);
+          throw new Error(`Failed to create product: ${insertError.message}`);
+        }
       }
 
       onSuccess();
