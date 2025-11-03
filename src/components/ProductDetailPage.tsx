@@ -3,6 +3,8 @@ import { supabase, Product, Rental } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { MapPin, DollarSign, User, Calendar, ArrowLeft, Star, Shield, ExternalLink } from 'lucide-react';
 import { RentalModal } from './RentalModal';
+import { ReviewsSection } from './ReviewsSection';
+import { ReviewForm } from './ReviewForm';
 
 type ProductDetailPageProps = {
   productId: string;
@@ -15,6 +17,7 @@ export const ProductDetailPage = ({ productId, onBack }: ProductDetailPageProps)
   const [loading, setLoading] = useState(true);
   const [showRentalModal, setShowRentalModal] = useState(false);
   const [hostRentals, setHostRentals] = useState<Rental[]>([]);
+  const [reviewsRefresh, setReviewsRefresh] = useState(0);
 
   useEffect(() => {
     fetchProduct();
@@ -113,7 +116,7 @@ export const ProductDetailPage = ({ productId, onBack }: ProductDetailPageProps)
         </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-6" id="product-details">
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
               <div className="h-96 bg-gradient-to-br from-blue-400 to-blue-600 relative">
                 {product.image_url ? (
@@ -172,6 +175,18 @@ export const ProductDetailPage = ({ productId, onBack }: ProductDetailPageProps)
                 </div>
               </div>
             </div>
+
+            <div className="bg-white rounded-2xl shadow-lg p-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">Reviews</h2>
+              <ReviewsSection productId={productId} refreshTrigger={reviewsRefresh} />
+            </div>
+
+            {user && !isOwnProduct && (
+              <ReviewForm
+                productId={productId}
+                onReviewSubmitted={() => setReviewsRefresh(prev => prev + 1)}
+              />
+            )}
 
             <div className="bg-white rounded-2xl shadow-lg p-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-6">Host Information</h2>
