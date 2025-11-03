@@ -4,7 +4,11 @@ import { Search, MapPin, Calendar } from 'lucide-react';
 import { ProductCard } from './ProductCard';
 import { RentalModal } from './RentalModal';
 
-export const BrowsePage = () => {
+type BrowsePageProps = {
+  onProductClick: (productId: string) => void;
+};
+
+export const BrowsePage = ({ onProductClick }: BrowsePageProps) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -130,6 +134,7 @@ export const BrowsePage = () => {
                 key={product.id}
                 product={product}
                 onRent={() => setSelectedProduct(product)}
+                onClick={() => onProductClick(product.id)}
               />
             ))}
           </div>

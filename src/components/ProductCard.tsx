@@ -5,12 +5,16 @@ type ProductCardProps = {
   product: Product;
   onRent?: () => void;
   onEdit?: () => void;
+  onClick?: () => void;
   showActions?: boolean;
 };
 
-export const ProductCard = ({ product, onRent, onEdit, showActions = true }: ProductCardProps) => {
+export const ProductCard = ({ product, onRent, onEdit, onClick, showActions = true }: ProductCardProps) => {
   return (
-    <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow">
+    <div
+      className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow cursor-pointer"
+      onClick={onClick}
+    >
       <div className="h-48 bg-gradient-to-br from-blue-400 to-blue-600 relative overflow-hidden">
         {product.image_url ? (
           <img
@@ -72,7 +76,10 @@ export const ProductCard = ({ product, onRent, onEdit, showActions = true }: Pro
             <div className="flex gap-2">
               {onEdit && (
                 <button
-                  onClick={onEdit}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit();
+                  }}
                   className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors text-sm font-medium"
                 >
                   Edit
@@ -80,7 +87,10 @@ export const ProductCard = ({ product, onRent, onEdit, showActions = true }: Pro
               )}
               {onRent && (
                 <button
-                  onClick={onRent}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRent();
+                  }}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                 >
                   Rent Now
