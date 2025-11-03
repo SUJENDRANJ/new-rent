@@ -18,6 +18,7 @@ export const ProductModal = ({ product, onClose, onSuccess }: ProductModalProps)
     price_per_day: '',
     category_id: '',
     location: '',
+    location_url: '',
     image_url: '',
     is_available: true,
   });
@@ -33,6 +34,7 @@ export const ProductModal = ({ product, onClose, onSuccess }: ProductModalProps)
         price_per_day: product.price_per_day.toString(),
         category_id: product.category_id || '',
         location: product.location,
+        location_url: product.location_url || '',
         image_url: product.image_url || '',
         is_available: product.is_available,
       });
@@ -76,6 +78,7 @@ export const ProductModal = ({ product, onClose, onSuccess }: ProductModalProps)
         price_per_day: pricePerDay,
         category_id: formData.category_id || null,
         location: formData.location,
+        location_url: formData.location_url || null,
         image_url: formData.image_url || null,
         is_available: formData.is_available,
         host_id: user.id,
@@ -191,6 +194,19 @@ export const ProductModal = ({ product, onClose, onSuccess }: ProductModalProps)
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="City, State"
               required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Location URL (optional)
+            </label>
+            <input
+              type="url"
+              value={formData.location_url}
+              onChange={(e) => setFormData({ ...formData, location_url: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="https://maps.google.com/..."
             />
           </div>
 

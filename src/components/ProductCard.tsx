@@ -1,5 +1,5 @@
 import { Product } from '../lib/supabase';
-import { MapPin, DollarSign, User } from 'lucide-react';
+import { MapPin, DollarSign, User, ExternalLink } from 'lucide-react';
 
 type ProductCardProps = {
   product: Product;
@@ -38,9 +38,22 @@ export const ProductCard = ({ product, onRent, onEdit, showActions = true }: Pro
         <p className="text-gray-600 text-sm mb-4 line-clamp-2">{product.description}</p>
 
         <div className="space-y-2 mb-4">
-          <div className="flex items-center text-sm text-gray-500">
-            <MapPin size={16} className="mr-2" />
-            {product.location}
+          <div className="flex items-center justify-between text-sm text-gray-500">
+            <div className="flex items-center">
+              <MapPin size={16} className="mr-2" />
+              {product.location}
+            </div>
+            {product.location_url && (
+              <a
+                href={product.location_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                title="View on map"
+              >
+                <ExternalLink size={14} />
+              </a>
+            )}
           </div>
           <div className="flex items-center text-sm text-gray-500">
             <User size={16} className="mr-2" />

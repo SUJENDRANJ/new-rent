@@ -84,11 +84,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (error) throw error;
 
     if (data.user) {
+      const isAdmin = email === 'admin@gmail.com';
+
       const { error: profileError } = await supabase.from('profiles').insert({
         id: data.user.id,
         email,
         full_name: fullName,
-        is_admin: false,
+        is_admin: isAdmin,
       });
 
       if (profileError) throw profileError;

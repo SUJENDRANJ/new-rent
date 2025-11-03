@@ -11,6 +11,9 @@ export type Profile = {
   full_name: string;
   avatar_url?: string;
   is_admin: boolean;
+  kyc_status: 'pending' | 'approved' | 'rejected';
+  kyc_submitted_at?: string;
+  kyc_document_url?: string;
   created_at: string;
   updated_at: string;
 };
@@ -31,6 +34,7 @@ export type Product = {
   price_per_day: number;
   image_url?: string;
   location: string;
+  location_url?: string;
   is_available: boolean;
   created_at: string;
   updated_at: string;
