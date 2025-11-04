@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { LogIn, UserPlus } from 'lucide-react';
+import { LogIn, UserPlus, Shield } from 'lucide-react';
 
 export const Auth = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -22,6 +22,19 @@ export const Auth = () => {
       } else {
         await signIn(email, password);
       }
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAdminLogin = async () => {
+    setError('');
+    setLoading(true);
+
+    try {
+      await signIn('admin@gmail.com', 'admin@123');
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -117,6 +130,18 @@ export const Auth = () => {
           >
             {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
           </button>
+        </div>
+
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <button
+            onClick={handleAdminLogin}
+            disabled={loading}
+            className="w-full bg-gray-900 text-white py-3 rounded-lg font-medium hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            <Shield size={20} />
+            Quick Admin Access
+          </button>
+          <p className="text-xs text-gray-500 text-center mt-2">Development only</p>
         </div>
       </div>
     </div>
