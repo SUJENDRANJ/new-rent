@@ -57,3 +57,14 @@ export type Rental = {
   renter?: Profile;
   host?: Profile;
 };
+
+export type Review = {
+  id: string;
+  product_id: string;
+  reviewer_id: string;
+  rating: number;
+  comment: string;
+  created_at: string;
+  updated_at: string;
+  reviewer?: Profile;
+};
