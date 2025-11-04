@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,6 +15,37 @@ export function ReviewForm({ productId, onReviewSubmitted }: ReviewFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [hasCompletedRental, setHasCompletedRental] = useState(false);
+  const [isChecking, setIsChecking] = useState(true);
+
+  useEffect(() => {
+    checkCompletedRental();
+  }, [productId]);
+
+  const checkCompletedRental = async () => {
+    setIsChecking(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setHasCompletedRental(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('rentals')
+        .select('id')
+        .eq('product_id', productId)
+        .eq('renter_id', user.id)
+        .eq('status', 'completed')
+        .maybeSingle();
+
+      setHasCompletedRental(!!data);
+    } catch (err) {
+      console.error('Failed to check rental status:', err);
+    } finally {
+      setIsChecking(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,8 +103,22 @@ export function ReviewForm({ productId, onReviewSubmitted }: ReviewFormProps) {
     }
   };
 
+  if (isChecking) {
+    return (
+      <div className="rounded-lg border border-gray-200 p-6 bg-white text-center">
+        <div className="inline-block animate-spin rounded-full h-5 w-5 border-2 border-gray-300 border-t-blue-600"></div>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-gray-200 p-6 bg-white">
+      {!hasCompletedRental && (
+        <div className="rounded-lg bg-amber-50 p-4 text-sm text-amber-700 border border-amber-200">
+          <p className="font-medium">You can only review products you have completed renting</p>
+        </div>
+      )}
+
       <div>
         <label className="block text-sm font-medium text-gray-900 mb-2">
           Rating
@@ -84,7 +129,10 @@ export function ReviewForm({ productId, onReviewSubmitted }: ReviewFormProps) {
               key={star}
               type="button"
               onClick={() => setRating(star)}
+              disabled={!hasCompletedRental}
               className={`transition-colors ${
+                !hasCompletedRental ? 'cursor-not-allowed opacity-50' : ''
+              } ${
                 star <= rating ? 'text-amber-400' : 'text-gray-300'
               }`}
             >
@@ -104,9 +152,10 @@ export function ReviewForm({ productId, onReviewSubmitted }: ReviewFormProps) {
         <Textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Share your experience with this product..."
+          placeholder={hasCompletedRental ? "Share your experience with this product..." : "Complete a rental to write a review"}
           rows={4}
           className="resize-none"
+          disabled={!hasCompletedRental}
         />
       </div>
 
@@ -124,10 +173,10 @@ export function ReviewForm({ productId, onReviewSubmitted }: ReviewFormProps) {
 
       <Button
         type="submit"
-        disabled={isSubmitting}
+        disabled={isSubmitting || !hasCompletedRental}
         className="w-full"
       >
-        {isSubmitting ? 'Submitting...' : 'Submit Review'}
+        {!hasCompletedRental ? 'Complete a Rental to Review' : isSubmitting ? 'Submitting...' : 'Submit Review'}
       </Button>
     </form>
   );
