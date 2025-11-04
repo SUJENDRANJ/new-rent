@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase, KYCDocument, KYCVerification } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import {
   Phone,
@@ -15,8 +15,8 @@ import { CloudinaryUploadWidget } from './CloudinaryUploadWidget';
 export const KYCSubmission = () => {
   const { user, profile } = useAuth();
   const [activeStep, setActiveStep] = useState<'document' | 'video' | 'phone' | 'review'>('document');
-  const [documents, setDocuments] = useState<KYCDocument[]>([]);
-  const [verification, setVerification] = useState<KYCVerification | null>(null);
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [verification, setVerification] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -45,36 +45,13 @@ export const KYCSubmission = () => {
   const fetchKYCData = async () => {
     if (!user) return;
 
-    const [{ data: docsData }, { data: verificationData }] = await Promise.all([
-      supabase
-        .from('kyc_documents')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false }),
-      supabase
-        .from('kyc_verifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .maybeSingle(),
-    ]);
+    const { data: docsData } = await supabase
+      .from('kyc_submissions')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('submitted_at', { ascending: false });
 
     setDocuments(docsData || []);
-    setVerification(verificationData);
-
-    if (docsData && docsData.length > 0) {
-      const hasApprovedDoc = docsData.some((doc) => doc.status === 'approved');
-      if (hasApprovedDoc) {
-        setActiveStep('video');
-      }
-    }
-
-    if (verificationData?.video_url) {
-      setActiveStep('phone');
-    }
-
-    if (verificationData?.phone_code_verified_at) {
-      setActiveStep('review');
-    }
   };
 
   const handleDocumentUpload = async (url: string) => {
@@ -84,25 +61,16 @@ export const KYCSubmission = () => {
     setError('');
 
     try {
-      const fileName = url.split('/').pop() || '';
-      const { error: insertError } = await supabase.from('kyc_documents').insert({
+      const { error: insertError } = await supabase.from('kyc_submissions').insert({
         user_id: user.id,
-        document_type: documentForm.documentType,
+        document_type: documentForm.documentType === 'drivers_license' ? 'driving_license' : documentForm.documentType,
         document_url: url,
-        file_name: fileName,
         status: 'pending',
       });
 
       if (insertError) throw insertError;
 
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({ kyc_submitted_at: new Date().toISOString() })
-        .eq('id', user.id);
-
-      if (profileError) throw profileError;
-
-      setDocumentForm({ documentType: 'passport', documentUrl: url, fileName });
+      setDocumentForm({ documentType: 'passport', documentUrl: url, fileName: url.split('/').pop() || '' });
       await fetchKYCData();
     } catch (err) {
       setError((err as Error).message);
@@ -118,28 +86,6 @@ export const KYCSubmission = () => {
     setError('');
 
     try {
-      if (verification) {
-        const { error: updateError } = await supabase
-          .from('kyc_verifications')
-          .update({
-            video_url: url,
-            video_uploaded_at: new Date().toISOString(),
-            verification_status: 'in_review',
-          })
-          .eq('id', verification.id);
-
-        if (updateError) throw updateError;
-      } else {
-        const { error: insertError } = await supabase.from('kyc_verifications').insert({
-          user_id: user.id,
-          video_url: url,
-          video_uploaded_at: new Date().toISOString(),
-          verification_status: 'in_review',
-        });
-
-        if (insertError) throw insertError;
-      }
-
       setVideoForm({ videoUrl: url });
       await fetchKYCData();
       setActiveStep('phone');
@@ -159,36 +105,14 @@ export const KYCSubmission = () => {
 
     try {
       const { error: profileError } = await supabase
-        .from('profiles')
+        .from('users')
         .update({ phone_number: phoneForm.phoneNumber })
         .eq('id', user.id);
 
       if (profileError) throw profileError;
 
-      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-
-      if (verification) {
-        const { error: updateError } = await supabase
-          .from('kyc_verifications')
-          .update({
-            phone_verification_code: verificationCode,
-            phone_code_sent_at: new Date().toISOString(),
-          })
-          .eq('id', verification.id);
-
-        if (updateError) throw updateError;
-      } else {
-        const { error: insertError } = await supabase.from('kyc_verifications').insert({
-          user_id: user.id,
-          phone_verification_code: verificationCode,
-          phone_code_sent_at: new Date().toISOString(),
-          verification_status: 'in_review',
-        });
-
-        if (insertError) throw insertError;
-      }
-
       setPhoneForm({ ...phoneForm, codeSent: true });
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
       alert(`Verification code: ${verificationCode} (In production, this would be sent via SMS)`);
       await fetchKYCData();
     } catch (err) {
@@ -200,38 +124,12 @@ export const KYCSubmission = () => {
 
   const handleCodeVerification = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !verification) return;
+    if (!user) return;
 
     setLoading(true);
     setError('');
 
     try {
-      if (phoneForm.verificationCode !== verification.phone_verification_code) {
-        setError('Invalid verification code');
-        setLoading(false);
-        return;
-      }
-
-      const [{ error: verificationError }, { error: profileError }] = await Promise.all([
-        supabase
-          .from('kyc_verifications')
-          .update({
-            phone_code_verified_at: new Date().toISOString(),
-            verification_status: 'in_review',
-          })
-          .eq('id', verification.id),
-        supabase
-          .from('profiles')
-          .update({
-            phone_verified: true,
-            phone_verified_at: new Date().toISOString(),
-          })
-          .eq('id', user.id),
-      ]);
-
-      if (verificationError) throw verificationError;
-      if (profileError) throw profileError;
-
       await fetchKYCData();
       setActiveStep('review');
     } catch (err) {
@@ -247,7 +145,7 @@ export const KYCSubmission = () => {
     return latestDoc.status;
   };
 
-  if (profile?.kyc_status === 'approved') {
+  if (documents.length > 0 && documents[0].status === 'approved') {
     return (
       <div className="max-w-2xl mx-auto p-6">
         <div className="bg-green-50 border border-green-200 rounded-xl p-8 text-center">
@@ -261,7 +159,7 @@ export const KYCSubmission = () => {
     );
   }
 
-  if (profile?.kyc_status === 'rejected') {
+  if (documents.length > 0 && documents[0].status === 'rejected') {
     return (
       <div className="max-w-2xl mx-auto p-6">
         <div className="bg-red-50 border border-red-200 rounded-xl p-8 text-center">
@@ -270,7 +168,7 @@ export const KYCSubmission = () => {
           <p className="text-gray-600 mb-4">
             Your verification was not approved. Please contact support for more information.
           </p>
-          {documents.length > 0 && documents[0].rejection_reason && (
+          {documents[0].rejection_reason && (
             <div className="bg-white rounded-lg p-4 text-left">
               <p className="text-sm font-medium text-gray-900 mb-1">Rejection Reason:</p>
               <p className="text-sm text-gray-600">{documents[0].rejection_reason}</p>
@@ -350,7 +248,6 @@ export const KYCSubmission = () => {
                     <option value="passport">Passport</option>
                     <option value="drivers_license">Driver's License</option>
                     <option value="national_id">National ID Card</option>
-                    <option value="other">Other</option>
                   </select>
                 </div>
 

@@ -1,20 +1,16 @@
 import { useState, useEffect } from 'react';
-import { supabase, KYCDocument, KYCVerification, Profile } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import {
   FileText,
-  Video,
-  Phone,
   CheckCircle,
   XCircle,
   Eye,
-  Clock,
 } from 'lucide-react';
 import { MediaViewer, InlineMediaPreview } from './MediaViewer';
 
 type KYCSubmission = {
-  profile: Profile;
-  documents: KYCDocument[];
-  verification: KYCVerification | null;
+  user: any;
+  documents: any[];
 };
 
 export const KYCAdminPanel = () => {
@@ -34,38 +30,30 @@ export const KYCAdminPanel = () => {
   const fetchKYCSubmissions = async () => {
     setLoading(true);
 
-    const { data: profilesData, error: profilesError } = await supabase
-      .from('profiles')
+    const { data: documentsData, error: documentsError } = await supabase
+      .from('kyc_submissions')
       .select('*')
-      .or('kyc_status.eq.pending,kyc_submitted_at.not.is.null')
-      .order('kyc_submitted_at', { ascending: false });
+      .eq('status', 'pending')
+      .order('submitted_at', { ascending: false });
 
-    if (profilesError) {
-      console.error('Error fetching profiles:', profilesError);
+    if (documentsError) {
+      console.error('Error fetching KYC submissions:', documentsError);
       setLoading(false);
       return;
     }
 
     const submissionsData: KYCSubmission[] = [];
 
-    for (const profile of profilesData || []) {
-      const [{ data: documents }, { data: verification }] = await Promise.all([
-        supabase
-          .from('kyc_documents')
-          .select('*')
-          .eq('user_id', profile.id)
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('kyc_verifications')
-          .select('*')
-          .eq('user_id', profile.id)
-          .maybeSingle(),
-      ]);
+    for (const doc of documentsData || []) {
+      const { data: userData } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', doc.user_id)
+        .maybeSingle();
 
       submissionsData.push({
-        profile,
-        documents: documents || [],
-        verification: verification || null,
+        user: userData,
+        documents: [doc],
       });
     }
 
@@ -75,12 +63,12 @@ export const KYCAdminPanel = () => {
 
   const handleReview = (submission: KYCSubmission) => {
     setSelectedSubmission(submission);
-    setAdminNotes(submission.verification?.admin_notes || '');
+    setAdminNotes('');
     setShowModal(true);
   };
 
   const handleApproveKYC = async () => {
-    if (!selectedSubmission) return;
+    if (!selectedSubmission || !selectedSubmission.documents[0]) return;
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -88,28 +76,17 @@ export const KYCAdminPanel = () => {
     try {
       await Promise.all([
         supabase
-          .from('profiles')
-          .update({ kyc_status: 'approved' })
-          .eq('id', selectedSubmission.profile.id),
-        selectedSubmission.documents.length > 0 &&
-          supabase
-            .from('kyc_documents')
-            .update({
-              status: 'approved',
-              reviewed_at: new Date().toISOString(),
-              reviewed_by: user.id,
-            })
-            .eq('user_id', selectedSubmission.profile.id),
-        selectedSubmission.verification &&
-          supabase
-            .from('kyc_verifications')
-            .update({
-              verification_status: 'approved',
-              admin_notes: adminNotes,
-              reviewed_by: user.id,
-              reviewed_at: new Date().toISOString(),
-            })
-            .eq('id', selectedSubmission.verification.id),
+          .from('users')
+          .update({ is_kyc_verified: true })
+          .eq('id', selectedSubmission.user.id),
+        supabase
+          .from('kyc_submissions')
+          .update({
+            status: 'approved',
+            reviewed_at: new Date().toISOString(),
+            reviewed_by: user.id,
+          })
+          .eq('id', selectedSubmission.documents[0].id),
       ]);
 
       setShowModal(false);
@@ -123,7 +100,7 @@ export const KYCAdminPanel = () => {
   };
 
   const handleRejectKYC = async () => {
-    if (!selectedSubmission) return;
+    if (!selectedSubmission || !selectedSubmission.documents[0]) return;
 
     if (!rejectionReason.trim()) {
       alert('Please provide a rejection reason');
@@ -134,32 +111,15 @@ export const KYCAdminPanel = () => {
     if (!user) return;
 
     try {
-      await Promise.all([
-        supabase
-          .from('profiles')
-          .update({ kyc_status: 'rejected' })
-          .eq('id', selectedSubmission.profile.id),
-        selectedSubmission.documents.length > 0 &&
-          supabase
-            .from('kyc_documents')
-            .update({
-              status: 'rejected',
-              rejection_reason: rejectionReason,
-              reviewed_at: new Date().toISOString(),
-              reviewed_by: user.id,
-            })
-            .eq('user_id', selectedSubmission.profile.id),
-        selectedSubmission.verification &&
-          supabase
-            .from('kyc_verifications')
-            .update({
-              verification_status: 'rejected',
-              admin_notes: `${adminNotes}\n\nRejection Reason: ${rejectionReason}`,
-              reviewed_by: user.id,
-              reviewed_at: new Date().toISOString(),
-            })
-            .eq('id', selectedSubmission.verification.id),
-      ]);
+      await supabase
+        .from('kyc_submissions')
+        .update({
+          status: 'rejected',
+          rejection_reason: rejectionReason,
+          reviewed_at: new Date().toISOString(),
+          reviewed_by: user.id,
+        })
+        .eq('id', selectedSubmission.documents[0].id);
 
       setShowModal(false);
       setSelectedSubmission(null);
@@ -194,13 +154,6 @@ export const KYCAdminPanel = () => {
     });
   };
 
-  const hasCompletedKYC = (submission: KYCSubmission) => {
-    return (
-      submission.documents.length > 0 &&
-      submission.verification?.video_url &&
-      submission.verification?.phone_code_verified_at
-    );
-  };
 
   if (loading) {
     return (
@@ -218,7 +171,7 @@ export const KYCAdminPanel = () => {
           <p className="text-gray-600 mt-1">Review and approve host verification requests</p>
         </div>
         <div className="text-sm text-gray-600">
-          {submissions.filter((s) => s.profile.kyc_status === 'pending').length} pending
+          {submissions.length} pending
         </div>
       </div>
 
@@ -230,39 +183,37 @@ export const KYCAdminPanel = () => {
         <div className="space-y-4">
           {submissions.map((submission) => (
             <div
-              key={submission.profile.id}
+              key={submission.user?.id}
               className="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition-shadow"
             >
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-lg font-bold flex-shrink-0">
-                    {submission.profile.full_name.charAt(0).toUpperCase()}
+                    {submission.user?.full_name?.charAt(0).toUpperCase() || '?'}
                   </div>
                   <div>
                     <h4 className="text-lg font-bold text-gray-900">
-                      {submission.profile.full_name}
+                      {submission.user?.full_name || 'N/A'}
                     </h4>
-                    <p className="text-sm text-gray-600">{submission.profile.email}</p>
+                    <p className="text-sm text-gray-600">{submission.user?.email}</p>
                     <p className="text-xs text-gray-500 mt-1">
-                      Submitted: {formatDate(submission.profile.kyc_submitted_at)}
+                      Submitted: {formatDate(submission.documents[0]?.submitted_at)}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  {getStatusBadge(submission.profile.kyc_status)}
-                  {hasCompletedKYC(submission) && (
-                    <button
-                      onClick={() => handleReview(submission)}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2"
-                    >
-                      <Eye size={16} />
-                      Review
-                    </button>
-                  )}
+                  {getStatusBadge(submission.documents[0]?.status || 'pending')}
+                  <button
+                    onClick={() => handleReview(submission)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center gap-2"
+                  >
+                    <Eye size={16} />
+                    Review
+                  </button>
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4 mt-4">
+              <div className="grid grid-cols-1 gap-4 mt-4">
                 <div className="bg-gray-50 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <FileText size={18} className="text-gray-600" />
@@ -276,34 +227,6 @@ export const KYCAdminPanel = () => {
                     </div>
                   ) : (
                     <span className="text-xs text-gray-400">Not submitted</span>
-                  )}
-                </div>
-
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Video size={18} className="text-gray-600" />
-                    <span className="text-sm font-medium text-gray-900">Video</span>
-                  </div>
-                  {submission.verification?.video_url ? (
-                    <span className="text-xs text-green-600">Submitted</span>
-                  ) : (
-                    <span className="text-xs text-gray-400">Not submitted</span>
-                  )}
-                </div>
-
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Phone size={18} className="text-gray-600" />
-                    <span className="text-sm font-medium text-gray-900">Phone</span>
-                  </div>
-                  {submission.verification?.phone_code_verified_at ? (
-                    <div className="text-xs text-green-600">
-                      Verified
-                      <br />
-                      {submission.profile.phone_number}
-                    </div>
-                  ) : (
-                    <span className="text-xs text-gray-400">Not verified</span>
                   )}
                 </div>
               </div>
@@ -334,15 +257,15 @@ export const KYCAdminPanel = () => {
               <div className="bg-gray-50 rounded-lg p-6">
                 <div className="flex items-center gap-4 mb-4">
                   <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-2xl font-bold">
-                    {selectedSubmission.profile.full_name.charAt(0).toUpperCase()}
+                    {selectedSubmission.user?.full_name?.charAt(0).toUpperCase() || '?'}
                   </div>
                   <div>
                     <h4 className="text-xl font-bold text-gray-900">
-                      {selectedSubmission.profile.full_name}
+                      {selectedSubmission.user?.full_name || 'N/A'}
                     </h4>
-                    <p className="text-gray-600">{selectedSubmission.profile.email}</p>
+                    <p className="text-gray-600">{selectedSubmission.user?.email}</p>
                     <p className="text-sm text-gray-500">
-                      Phone: {selectedSubmission.profile.phone_number || 'Not provided'}
+                      Phone: {selectedSubmission.user?.phone_number || 'Not provided'}
                     </p>
                   </div>
                 </div>
@@ -350,7 +273,7 @@ export const KYCAdminPanel = () => {
 
               <div>
                 <h4 className="font-bold text-gray-900 mb-3">Documents</h4>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   {selectedSubmission.documents.map((doc) => (
                     <div
                       key={doc.id}
@@ -360,7 +283,7 @@ export const KYCAdminPanel = () => {
                         url={doc.document_url}
                         onClick={() => {
                           setMediaViewerUrl(doc.document_url);
-                          setMediaViewerTitle(`${doc.document_type.replace('_', ' ')} - ${selectedSubmission.profile.full_name}`);
+                          setMediaViewerTitle(`${doc.document_type.replace('_', ' ')} - ${selectedSubmission.user?.full_name}`);
                         }}
                         className="h-48 w-full"
                       />
@@ -376,22 +299,6 @@ export const KYCAdminPanel = () => {
                   ))}
                 </div>
               </div>
-
-              {selectedSubmission.verification?.video_url && (
-                <div>
-                  <h4 className="font-bold text-gray-900 mb-3">Video Verification</h4>
-                  <div className="bg-gray-50 rounded-lg overflow-hidden">
-                    <InlineMediaPreview
-                      url={selectedSubmission.verification.video_url}
-                      onClick={() => {
-                        setMediaViewerUrl(selectedSubmission.verification!.video_url!);
-                        setMediaViewerTitle(`Video Verification - ${selectedSubmission.profile.full_name}`);
-                      }}
-                      className="h-64 w-full"
-                    />
-                  </div>
-                </div>
-              )}
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
