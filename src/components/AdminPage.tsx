@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, Product, Rental, Profile, Category } from '../lib/supabase';
-import { Users, Package, Calendar, DollarSign, Plus, Trash2, CheckCircle, XCircle, ShieldCheck } from 'lucide-react';
+import { Users, Package, Calendar, DollarSign, Plus, Trash2, CheckCircle, XCircle, ShieldCheck, FileCheck } from 'lucide-react';
+import { KYCAdminPanel } from './KYCAdminPanel';
 
 export const AdminPage = () => {
   const [stats, setStats] = useState({
@@ -13,7 +14,7 @@ export const AdminPage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [users, setUsers] = useState<Profile[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'products' | 'categories'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'products' | 'categories' | 'kyc'>('overview');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [newCategory, setNewCategory] = useState({ name: '', description: '' });
   const [loading, setLoading] = useState(true);
@@ -194,6 +195,16 @@ export const AdminPage = () => {
             Overview
           </button>
           <button
+            onClick={() => setActiveTab('kyc')}
+            className={`px-6 py-3 rounded-lg font-medium transition-colors whitespace-nowrap ${
+              activeTab === 'kyc'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            KYC Review
+          </button>
+          <button
             onClick={() => setActiveTab('users')}
             className={`px-6 py-3 rounded-lg font-medium transition-colors whitespace-nowrap ${
               activeTab === 'users'
@@ -224,6 +235,8 @@ export const AdminPage = () => {
             Categories
           </button>
         </div>
+
+        {activeTab === 'kyc' && <KYCAdminPanel />}
 
         {activeTab === 'overview' && (
           <>

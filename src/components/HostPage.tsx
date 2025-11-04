@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { supabase, Product, Category } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { Plus } from 'lucide-react';
+import { Plus, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { ProductCard } from './ProductCard';
 import { ProductModal } from './ProductModal';
+import { KYCSubmission } from './KYCSubmission';
 
 export const HostPage = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -62,9 +63,52 @@ export const HostPage = () => {
     fetchMyProducts();
   };
 
+  if (profile?.kyc_status !== 'approved') {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <h2 className="text-3xl font-bold text-gray-900 mb-6">Become a Host</h2>
+
+          {profile?.kyc_status === 'pending' && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-6 flex items-start gap-4">
+              <Clock size={24} className="text-yellow-600 flex-shrink-0 mt-1" />
+              <div>
+                <h3 className="font-bold text-gray-900 mb-1">KYC Verification Pending</h3>
+                <p className="text-gray-600 text-sm">
+                  To list products as a host, you need to complete the KYC verification process. This helps ensure a safe and trusted community.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {profile?.kyc_status === 'rejected' && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-6 flex items-start gap-4">
+              <AlertCircle size={24} className="text-red-600 flex-shrink-0 mt-1" />
+              <div>
+                <h3 className="font-bold text-gray-900 mb-1">KYC Verification Required</h3>
+                <p className="text-gray-600 text-sm">
+                  Your previous verification was not approved. Please resubmit your documents to become a verified host.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <KYCSubmission />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 flex items-center gap-3">
+          <CheckCircle size={20} className="text-green-600 flex-shrink-0" />
+          <p className="text-sm text-green-800">
+            <span className="font-semibold">Verified Host</span> - You can now list products
+          </p>
+        </div>
+
         <div className="flex justify-between items-center mb-8">
           <div>
             <h2 className="text-3xl font-bold text-gray-900">My Listings</h2>

@@ -10,10 +10,45 @@ export type Profile = {
   email: string;
   full_name: string;
   avatar_url?: string;
+  phone_number?: string;
+  phone_verified: boolean;
+  phone_verified_at?: string;
   is_admin: boolean;
   kyc_status: 'pending' | 'approved' | 'rejected';
   kyc_submitted_at?: string;
   kyc_document_url?: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type KYCDocument = {
+  id: string;
+  user_id: string;
+  document_type: 'passport' | 'drivers_license' | 'national_id' | 'other';
+  document_url: string;
+  file_name?: string;
+  file_size?: number;
+  mime_type?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  rejection_reason?: string;
+  submitted_at: string;
+  reviewed_at?: string;
+  reviewed_by?: string;
+  created_at: string;
+};
+
+export type KYCVerification = {
+  id: string;
+  user_id: string;
+  video_url?: string;
+  video_uploaded_at?: string;
+  phone_verification_code?: string;
+  phone_code_sent_at?: string;
+  phone_code_verified_at?: string;
+  verification_status: 'pending' | 'in_review' | 'approved' | 'rejected';
+  admin_notes?: string;
+  reviewed_by?: string;
+  reviewed_at?: string;
   created_at: string;
   updated_at: string;
 };
