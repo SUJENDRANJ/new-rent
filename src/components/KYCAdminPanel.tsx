@@ -8,9 +8,8 @@ import {
   XCircle,
   Eye,
   Clock,
-  User,
-  ExternalLink,
 } from 'lucide-react';
+import { MediaViewer, InlineMediaPreview } from './MediaViewer';
 
 type KYCSubmission = {
   profile: Profile;
@@ -25,6 +24,8 @@ export const KYCAdminPanel = () => {
   const [rejectionReason, setRejectionReason] = useState('');
   const [adminNotes, setAdminNotes] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [mediaViewerUrl, setMediaViewerUrl] = useState<string | null>(null);
+  const [mediaViewerTitle, setMediaViewerTitle] = useState<string>('');
 
   useEffect(() => {
     fetchKYCSubmissions();
@@ -349,29 +350,28 @@ export const KYCAdminPanel = () => {
 
               <div>
                 <h4 className="font-bold text-gray-900 mb-3">Documents</h4>
-                <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-4">
                   {selectedSubmission.documents.map((doc) => (
                     <div
                       key={doc.id}
-                      className="bg-gray-50 rounded-lg p-4 flex items-center justify-between"
+                      className="bg-gray-50 rounded-lg overflow-hidden"
                     >
-                      <div>
-                        <p className="font-medium text-gray-900">
+                      <InlineMediaPreview
+                        url={doc.document_url}
+                        onClick={() => {
+                          setMediaViewerUrl(doc.document_url);
+                          setMediaViewerTitle(`${doc.document_type.replace('_', ' ')} - ${selectedSubmission.profile.full_name}`);
+                        }}
+                        className="h-48 w-full"
+                      />
+                      <div className="p-3">
+                        <p className="font-medium text-gray-900 text-sm">
                           {doc.document_type.replace('_', ' ')}
                         </p>
                         <p className="text-xs text-gray-500">
                           Submitted: {formatDate(doc.submitted_at)}
                         </p>
                       </div>
-                      <a
-                        href={doc.document_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                      >
-                        <ExternalLink size={16} />
-                        View Document
-                      </a>
                     </div>
                   ))}
                 </div>
@@ -380,16 +380,15 @@ export const KYCAdminPanel = () => {
               {selectedSubmission.verification?.video_url && (
                 <div>
                   <h4 className="font-bold text-gray-900 mb-3">Video Verification</h4>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <a
-                      href={selectedSubmission.verification.video_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium inline-flex"
-                    >
-                      <ExternalLink size={16} />
-                      View Video
-                    </a>
+                  <div className="bg-gray-50 rounded-lg overflow-hidden">
+                    <InlineMediaPreview
+                      url={selectedSubmission.verification.video_url}
+                      onClick={() => {
+                        setMediaViewerUrl(selectedSubmission.verification!.video_url!);
+                        setMediaViewerTitle(`Video Verification - ${selectedSubmission.profile.full_name}`);
+                      }}
+                      className="h-64 w-full"
+                    />
                   </div>
                 </div>
               )}
@@ -439,6 +438,17 @@ export const KYCAdminPanel = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {mediaViewerUrl && (
+        <MediaViewer
+          url={mediaViewerUrl}
+          title={mediaViewerTitle}
+          onClose={() => {
+            setMediaViewerUrl(null);
+            setMediaViewerTitle('');
+          }}
+        />
       )}
     </div>
   );

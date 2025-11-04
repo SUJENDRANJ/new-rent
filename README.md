@@ -22,6 +22,9 @@ A comprehensive peer-to-peer rental platform built with React, TypeScript, and S
 ### Admin Features
 - **Dashboard**: Overview of platform statistics
 - **KYC Review**: Review and approve host verification requests
+  - Real-time media preview (images, PDFs, videos)
+  - Inline video playback
+  - Full-screen media viewer
 - **User Management**: View and manage users
 - **Product Management**: Monitor and manage all listings
 - **Category Management**: Create and organize product categories
@@ -31,14 +34,18 @@ A comprehensive peer-to-peer rental platform built with React, TypeScript, and S
 To list products as a host, users must complete the following verification steps:
 
 ### 1. Document Upload
-- Upload a clear image or PDF of a government-issued ID
+- Upload a clear image or PDF of a government-issued ID via Cloudinary
 - Supported documents: Passport, Driver's License, National ID Card
-- Documents are reviewed by admin team
+- Supported formats: JPG, PNG, PDF (max 10MB)
+- Real-time upload with progress tracking
+- Documents are stored securely and reviewed by admin team
 
 ### 2. Video Verification
-- Record a short video (10-30 seconds)
+- Record and upload a short video (10-30 seconds) via Cloudinary
 - Hold ID next to face and state full name
-- Video is reviewed for authenticity
+- Supported formats: MP4, MOV, AVI, WEBM (max 50MB)
+- Real-time upload with progress tracking
+- Video is reviewed for authenticity by admin team
 
 ### 3. Phone Verification
 - Provide phone number
@@ -57,6 +64,7 @@ To list products as a host, users must complete the following verification steps
 - **UI Components**: Radix UI, Lucide React icons
 - **Backend**: Supabase (PostgreSQL + Auth)
 - **Authentication**: Supabase Auth with email/password
+- **Media Storage**: Cloudinary (for KYC documents and videos)
 
 ## Database Schema
 
@@ -82,8 +90,9 @@ To list products as a host, users must complete the following verification steps
 1. Clone the repository
 2. Install dependencies: `npm install`
 3. Configure Supabase credentials in `.env`
-4. Run development server: `npm run dev`
-5. Build for production: `npm run build`
+4. Set up Cloudinary for file uploads (see [CLOUDINARY_SETUP.md](./CLOUDINARY_SETUP.md))
+5. Run development server: `npm run dev`
+6. Build for production: `npm run build`
 
 ## Admin Access
 
@@ -96,6 +105,11 @@ For development purposes, there is a quick admin login option:
 Required environment variables:
 - `VITE_SUPABASE_URL`: Your Supabase project URL
 - `VITE_SUPABASE_ANON_KEY`: Your Supabase anonymous key
+- `VITE_CLOUDINARY_CLOUD_NAME`: Your Cloudinary cloud name
+- `VITE_CLOUDINARY_UPLOAD_PRESET`: Your Cloudinary upload preset
+- `VITE_CLOUDINARY_API_KEY`: Your Cloudinary API key
+
+For detailed Cloudinary setup instructions, see [CLOUDINARY_SETUP.md](./CLOUDINARY_SETUP.md)
 
 ## License
 

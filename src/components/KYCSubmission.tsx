@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import { supabase, KYCDocument, KYCVerification } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  Upload,
-  Video,
   Phone,
   CheckCircle,
   XCircle,
@@ -12,6 +10,7 @@ import {
   Camera,
   Loader2,
 } from 'lucide-react';
+import { CloudinaryUploadWidget } from './CloudinaryUploadWidget';
 
 export const KYCSubmission = () => {
   const { user, profile } = useAuth();
@@ -78,24 +77,19 @@ export const KYCSubmission = () => {
     }
   };
 
-  const handleDocumentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleDocumentUpload = async (url: string) => {
     if (!user) return;
-
-    if (!documentForm.documentUrl) {
-      setError('Please provide a document URL');
-      return;
-    }
 
     setLoading(true);
     setError('');
 
     try {
+      const fileName = url.split('/').pop() || '';
       const { error: insertError } = await supabase.from('kyc_documents').insert({
         user_id: user.id,
         document_type: documentForm.documentType,
-        document_url: documentForm.documentUrl,
-        file_name: documentForm.fileName || null,
+        document_url: url,
+        file_name: fileName,
         status: 'pending',
       });
 
@@ -108,7 +102,7 @@ export const KYCSubmission = () => {
 
       if (profileError) throw profileError;
 
-      setDocumentForm({ documentType: 'passport', documentUrl: '', fileName: '' });
+      setDocumentForm({ documentType: 'passport', documentUrl: url, fileName });
       await fetchKYCData();
     } catch (err) {
       setError((err as Error).message);
@@ -117,14 +111,8 @@ export const KYCSubmission = () => {
     }
   };
 
-  const handleVideoSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleVideoUpload = async (url: string) => {
     if (!user) return;
-
-    if (!videoForm.videoUrl) {
-      setError('Please provide a video URL');
-      return;
-    }
 
     setLoading(true);
     setError('');
@@ -134,7 +122,7 @@ export const KYCSubmission = () => {
         const { error: updateError } = await supabase
           .from('kyc_verifications')
           .update({
-            video_url: videoForm.videoUrl,
+            video_url: url,
             video_uploaded_at: new Date().toISOString(),
             verification_status: 'in_review',
           })
@@ -144,7 +132,7 @@ export const KYCSubmission = () => {
       } else {
         const { error: insertError } = await supabase.from('kyc_verifications').insert({
           user_id: user.id,
-          video_url: videoForm.videoUrl,
+          video_url: url,
           video_uploaded_at: new Date().toISOString(),
           verification_status: 'in_review',
         });
@@ -152,7 +140,7 @@ export const KYCSubmission = () => {
         if (insertError) throw insertError;
       }
 
-      setVideoForm({ videoUrl: '' });
+      setVideoForm({ videoUrl: url });
       await fetchKYCData();
       setActiveStep('phone');
     } catch (err) {
@@ -259,11 +247,6 @@ export const KYCSubmission = () => {
     return latestDoc.status;
   };
 
-  const getVerificationStatus = () => {
-    if (!verification) return 'pending';
-    return verification.verification_status;
-  };
-
   if (profile?.kyc_status === 'approved') {
     return (
       <div className="max-w-2xl mx-auto p-6">
@@ -349,7 +332,7 @@ export const KYCSubmission = () => {
                 driver's license, or national ID card)
               </p>
 
-              <form onSubmit={handleDocumentSubmit} className="space-y-4">
+              <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Document Type
@@ -373,56 +356,24 @@ export const KYCSubmission = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Document URL
+                    Upload Document
                   </label>
-                  <input
-                    type="url"
-                    value={documentForm.documentUrl}
-                    onChange={(e) =>
-                      setDocumentForm({ ...documentForm, documentUrl: e.target.value })
-                    }
-                    placeholder="https://example.com/document.jpg"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
+                  <CloudinaryUploadWidget
+                    onUploadSuccess={handleDocumentUpload}
+                    onUploadError={(err) => setError(err.message)}
+                    resourceType="raw"
+                    buttonText="Upload ID Document"
+                    disabled={loading}
+                    acceptedFormats={['jpg', 'jpeg', 'png', 'pdf']}
+                    maxFileSize={10000000}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Upload your document to a secure service and provide the URL
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    File Name (optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={documentForm.fileName}
-                    onChange={(e) =>
-                      setDocumentForm({ ...documentForm, fileName: e.target.value })
-                    }
-                    placeholder="passport.jpg"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 size={20} className="animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <Upload size={20} />
-                      Submit Document
-                    </>
+                  {documentForm.documentUrl && (
+                    <p className="text-xs text-green-600 mt-2">
+                      Document uploaded successfully!
+                    </p>
                   )}
-                </button>
-              </form>
+                </div>
+              </div>
 
               {documents.length > 0 && (
                 <div className="mt-6 space-y-2">
@@ -468,42 +419,27 @@ export const KYCSubmission = () => {
                 your full name
               </p>
 
-              <form onSubmit={handleVideoSubmit} className="space-y-4">
+              <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Video URL
+                    Upload Video
                   </label>
-                  <input
-                    type="url"
-                    value={videoForm.videoUrl}
-                    onChange={(e) => setVideoForm({ videoUrl: e.target.value })}
-                    placeholder="https://example.com/verification-video.mp4"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
+                  <CloudinaryUploadWidget
+                    onUploadSuccess={handleVideoUpload}
+                    onUploadError={(err) => setError(err.message)}
+                    resourceType="video"
+                    buttonText="Upload Verification Video"
+                    disabled={loading}
+                    acceptedFormats={['mp4', 'mov', 'avi', 'webm']}
+                    maxFileSize={50000000}
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Upload your video to a secure service and provide the URL
-                  </p>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 size={20} className="animate-spin" />
-                      Submitting...
-                    </>
-                  ) : (
-                    <>
-                      <Video size={20} />
-                      Submit Video
-                    </>
+                  {videoForm.videoUrl && (
+                    <p className="text-xs text-green-600 mt-2">
+                      Video uploaded successfully!
+                    </p>
                   )}
-                </button>
-              </form>
+                </div>
+              </div>
             </div>
           </div>
         )}
