@@ -6,11 +6,12 @@ import { BrowsePage } from './components/BrowsePage';
 import { HostPage } from './components/HostPage';
 import { RentalsPage } from './components/RentalsPage';
 import { AdminPage } from './components/AdminPage';
+import { WishlistPage } from './components/WishlistPage';
 import { ProductDetailPage } from './components/ProductDetailPage';
 
 function MainApp() {
   const { user, loading } = useAuth();
-  const [currentView, setCurrentView] = useState<'browse' | 'host' | 'rentals' | 'admin'>('browse');
+  const [currentView, setCurrentView] = useState<'browse' | 'host' | 'rentals' | 'wishlist' | 'admin'>('browse');
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
 
   if (loading) {
@@ -43,6 +44,7 @@ function MainApp() {
       {currentView === 'browse' && <BrowsePage onProductClick={setSelectedProductId} />}
       {currentView === 'host' && <HostPage />}
       {currentView === 'rentals' && <RentalsPage />}
+      {currentView === 'wishlist' && <WishlistPage onProductClick={setSelectedProductId} />}
       {currentView === 'admin' && <AdminPage />}
     </div>
   );

@@ -1,5 +1,7 @@
-import { Product } from '../lib/supabase';
-import { MapPin, DollarSign, User, ExternalLink } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Product, supabase } from '../lib/supabase';
+import { MapPin, DollarSign, User, ExternalLink, Heart } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 type ProductCardProps = {
   product: Product;
@@ -7,9 +9,71 @@ type ProductCardProps = {
   onEdit?: () => void;
   onClick?: () => void;
   showActions?: boolean;
+  showWishlist?: boolean;
 };
 
-export const ProductCard = ({ product, onRent, onEdit, onClick, showActions = true }: ProductCardProps) => {
+export const ProductCard = ({ product, onRent, onEdit, onClick, showActions = true, showWishlist = true }: ProductCardProps) => {
+  const { user } = useAuth();
+  const [isInWishlist, setIsInWishlist] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
+
+  useEffect(() => {
+    if (user && showWishlist) {
+      checkWishlist();
+    }
+  }, [user, product.id, showWishlist]);
+
+  const checkWishlist = async () => {
+    if (!user) return;
+
+    const { data } = await supabase
+      .from('wishlists')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('product_id', product.id)
+      .maybeSingle();
+
+    setIsInWishlist(!!data);
+  };
+
+  const toggleWishlist = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user || wishlistLoading) return;
+
+    setWishlistLoading(true);
+
+    try {
+      if (isInWishlist) {
+        const { error } = await supabase
+          .from('wishlists')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('product_id', product.id);
+
+        if (!error) {
+          setIsInWishlist(false);
+        }
+      } else {
+        const { error } = await supabase
+          .from('wishlists')
+          .insert({
+            user_id: user.id,
+            product_id: product.id,
+          });
+
+        if (!error) {
+          setIsInWishlist(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error toggling wishlist:', error);
+    } finally {
+      setWishlistLoading(false);
+    }
+  };
+
+  const isOwnProduct = user?.id === product.host_id;
+
   return (
     <div
       className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-shadow cursor-pointer"
@@ -26,6 +90,23 @@ export const ProductCard = ({ product, onRent, onEdit, onClick, showActions = tr
           <div className="w-full h-full flex items-center justify-center text-white text-6xl font-bold">
             {product.title.charAt(0).toUpperCase()}
           </div>
+        )}
+        {showWishlist && user && !isOwnProduct && (
+          <button
+            onClick={toggleWishlist}
+            disabled={wishlistLoading}
+            className={`absolute top-3 right-3 p-2 rounded-full shadow-lg transition-all ${
+              isInWishlist
+                ? 'bg-red-500 hover:bg-red-600'
+                : 'bg-white hover:bg-gray-50'
+            } disabled:opacity-50`}
+            title={isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+          >
+            <Heart
+              size={20}
+              className={isInWishlist ? 'text-white fill-white' : 'text-gray-600'}
+            />
+          </button>
         )}
       </div>
 

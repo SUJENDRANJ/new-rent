@@ -1,9 +1,9 @@
 import { useAuth } from '../contexts/AuthContext';
-import { LogOut, User, Package, ShoppingBag, LayoutDashboard } from 'lucide-react';
+import { LogOut, User, Package, ShoppingBag, LayoutDashboard, Heart } from 'lucide-react';
 
 type NavbarProps = {
-  currentView: 'browse' | 'host' | 'rentals' | 'admin';
-  onViewChange: (view: 'browse' | 'host' | 'rentals' | 'admin') => void;
+  currentView: 'browse' | 'host' | 'rentals' | 'wishlist' | 'admin';
+  onViewChange: (view: 'browse' | 'host' | 'rentals' | 'wishlist' | 'admin') => void;
 };
 
 export const Navbar = ({ currentView, onViewChange }: NavbarProps) => {
@@ -59,6 +59,18 @@ export const Navbar = ({ currentView, onViewChange }: NavbarProps) => {
               >
                 <User size={18} />
                 My Rentals
+              </button>
+
+              <button
+                onClick={() => onViewChange('wishlist')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                  currentView === 'wishlist'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <Heart size={18} />
+                Wishlist
               </button>
 
               {profile?.is_admin && (

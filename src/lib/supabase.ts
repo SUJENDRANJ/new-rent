@@ -103,3 +103,11 @@ export type Review = {
   updated_at: string;
   reviewer?: Profile;
 };
+
+export type Wishlist = {
+  id: string;
+  user_id: string;
+  product_id: string;
+  created_at: string;
+  products?: Product;
+};
